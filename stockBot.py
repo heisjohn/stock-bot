@@ -56,28 +56,21 @@ async def on_ready():
     global users
     while True:
         while True:
-            with open('stockList.json') as f:
-                stockList = json.load(f)
             await asyncio.sleep(10)
-            if len(stockList) < 6:
-                await newStock()
             for stock in stockList:
-                recentPrices = stockList[stock]['pastPrices']
+
+                try:
+                    del stockList[stock]['pastPrices'][0]
+                except:
+                    pass
+
                 oldPrice = stockList[stock]['price']
                 newPrice = await YSELoop(stock, oldPrice,
                                          stockList[stock]['randomX'],
                                          stockList[stock]['randomY'])
-                if newPrice == -500:
-                    break
 
                 stockList[stock]['pastPrices'].append(oldPrice)
                 stockList[stock]['price'] = newPrice
-
-                try:
-                    x = stockList[stock]['pastPrices'][50]
-                    del stockList[stock]['pastPrices'][0]
-                except:
-                    pass
 
                 if random.randint(1,1000) > 990:
                     print("crash")
@@ -92,26 +85,29 @@ async def on_ready():
                     stockList[stock]['randomY'] = round(random.triangular(0.1,1,10),2)
                     print(stockList[stock]['randomX'])
 
-                ### uses matplotlib to create plot
-
-                plt.figure()
-                plt.ylabel('Cost')
-                plt.xlabel('Time')
-
-                plt.title('Stock Market', fontsize=20)
-
-                for stock in stockList:
-                    plt.plot(stockList[stock]['pastPrices'], label = stock,
-                             linewidth = 2.5, alpha=0.80)
-                plt.legend(framealpha=0.5)
-                plt.tight_layout()
-
-                plt.savefig('recentchart.png', transparent=True, dpi = 200)
-
-                plt.close('all')
-
                 if len(stockList) < 6:
                     await newStock()
+
+            with open('stockList.json', 'w') as f:
+                json.dump(stockList,f)
+
+            ### uses matplotlib to create plot
+
+            plt.figure()
+            plt.ylabel('Cost')
+            plt.xlabel('Time')
+
+            plt.title('Stock Market', fontsize=20)
+
+            for stock in stockList:
+                plt.plot(stockList[stock]['pastPrices'] + [stockList[stock]['price']], label = stock,
+                         linewidth = 2.5, alpha=0.80)
+            plt.legend(framealpha=0.5)
+            plt.tight_layout()
+
+            plt.savefig('recentchart.png', transparent=True, dpi = 200)
+
+            plt.close('all')
 
             for server in servers:
                 try:
@@ -232,7 +228,7 @@ async def on_message(message):
             return
     if message.content.lower() == "my stocks":
 
-        embed = discord.Embed(title="YOUR STOCKS", color=0x49382e)
+        embed = discord.Embed(title="YOUR STOCKS", color=0x8bcb98)
         money = users[str(message.author.id)]['money']
         netWorth = 0
         netWorth += money
@@ -257,7 +253,7 @@ async def on_message(message):
         return
 
     if message.content.lower() == "stock help":
-        embed = discord.Embed(title="STOCK COMMANDS", color=0x49382e)
+        embed = discord.Embed(title="STOCK COMMANDS", color=0x8bcb98)
         embed.add_field(name="$", value=f"Sending a message containing '$' gives $50")
         embed.add_field(name="My Money", value=f"Displays the amount of money that you have.")
         embed.add_field(name="Flip (Bet Amount) (Heads or Tails)", value=f"Coin flip to win (or lose) money.")
@@ -292,7 +288,7 @@ async def on_message(message):
 
         sortedTopSet = sorted(topSet, key=lambda x: x[1], reverse=True)
 
-        embed = discord.Embed(title="LEADERBOARD", color=0x49382e)
+        embed = discord.Embed(title="LEADERBOARD", color=0x8bcb98)
 
         limit = 5
         
@@ -399,18 +395,16 @@ async def newStock():
 
     #opens json file and adds the ticker and the price under the stock name
     if not newTicker in stockList:
-        stockList2 = stockList.copy()
-        stockList2[newTicker] = {}
-        stockList2[newTicker]['stockName'] = newStock
-        stockList2[newTicker]['initialPrice'] = initialPrice
-        stockList2[newTicker]['price'] = initialPrice
-        stockList2[newTicker]['randomX'] = randomX
-        stockList2[newTicker]['randomY'] = randomY
-        stockList2[newTicker]['buyers'] = {}
-        stockList2[newTicker]['pastPrices'] = []
-        
-    with open('stockList.json', 'w') as f:
-        json.dump(stockList2,f)
+        stockList[newTicker] = {}
+        stockList[newTicker]['stockName'] = newStock
+        stockList[newTicker]['initialPrice'] = initialPrice
+        stockList[newTicker]['price'] = initialPrice
+        stockList[newTicker]['randomX'] = randomX
+        stockList[newTicker]['randomY'] = randomY
+        stockList[newTicker]['buyers'] = {}
+        stockList[newTicker]['pastPrices'] = []
+        for i in range(50):
+            stockList[newTicker]['pastPrices'].append(0)
 
 # B. This is the growth model, which takes a rate from a normal distribution using the mean and stdef from above
 
@@ -419,11 +413,11 @@ async def YSELoop(stock, price, randomX, randomY):
     global users
     global stockList
 
-    if len(stockList[stock]['pastPrices']) == 50:
+    if len(stockList[stock]['pastPrices']) == 49:
 
-        if stockList[stock]['pastPrices'][49] <= 5:
+        if stockList[stock]['pastPrices'][48] <= 5:
             returnValue = stockList[stock]['pastPrices'][49] - 1
-            if stockList[stock]['pastPrices'][49] <= 0:
+            if stockList[stock]['price'] <= 0:
                 print("stock dies")
 
                 for server in servers:
@@ -432,8 +426,6 @@ async def YSELoop(stock, price, randomX, randomY):
                     except:
                         pass
                 del stockList[stock]
-                with open('stockList.json', 'w') as f:
-                    json.dump(stockList,f)
 
                 return -500
             return returnValue
@@ -443,10 +435,6 @@ async def YSELoop(stock, price, randomX, randomY):
     if price <= 0:
         price = 0
 
-    with open('stockList.json', 'w') as f:
-        json.dump(stockList,f)
-
-
     return round(price,2)
 
 async def displayStocks(serverID):
@@ -454,7 +442,7 @@ async def displayStocks(serverID):
     global stockList
     await client.get_channel(serverID).send(file=discord.File('recentchart.png'))
 
-    embed = discord.Embed(title="STOCK MARKET | " + strftime("%H:%M:%S"), color=0x49382e)
+    embed = discord.Embed(title="STOCK MARKET | " + strftime("%H:%M:%S"), color=0x8bcb98)
     for stock in stockList:
         name = stockList[stock]['stockName']
         stockPrice = stockList[stock]['price']
@@ -485,9 +473,6 @@ async def add_stocks(username, stockname, number):
         stockList[stockname]['buyers'][str(username.id)]['stocks'] = 0
     stockList[stockname]['buyers'][str(username.id)]['stocks'] += number
     stockList[stockname]['buyers'][str(username.id)]['stocks']
-    with open('stockList.json', 'w') as f:
-        json.dump(stockList,f)
-
 
 async def playAudio(audioName, message):
         try:
@@ -501,4 +486,4 @@ async def playAudio(audioName, message):
         play = join.create_ffmpeg_player(audioName)
         play.start()
 
-client.run("insert key here")
+client.run("Insert token here")
