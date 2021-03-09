@@ -48,78 +48,75 @@ NAlpha = ['Accounting', 'Bank', 'Corp.', 'Derivatives', 'Enterprises',
           'Visions', 'Workers', 'Yeahs', 'Zoologists']
 
 
-client = commands.Bot(command_prefix = "")
+client = commands.Bot(command_prefix="")
 
 @client.event
 async def on_ready():
     global stockList
     global users
     while True:
-        while True:
-            await asyncio.sleep(10)
-            for stock in stockList:
+        await asyncio.sleep(10)
+        for stock in stockList:
 
-                try:
-                    del stockList[stock]['pastPrices'][0]
-                except:
-                    pass
+            try:
+                del stockList[stock]['pastPrices'][0]
+            except:
+                pass
 
-                oldPrice = stockList[stock]['price']
-                newPrice = await YSELoop(stock, oldPrice,
-                                         stockList[stock]['randomX'],
-                                         stockList[stock]['randomY'])
+            oldPrice = stockList[stock]['price']
+            newPrice = await YSELoop(stock, oldPrice,
+                                     stockList[stock]['randomX'],
+                                     stockList[stock]['randomY'])
 
-                stockList[stock]['pastPrices'].append(oldPrice)
-                stockList[stock]['price'] = newPrice
+            stockList[stock]['pastPrices'].append(oldPrice)
+            stockList[stock]['price'] = newPrice
 
-                if random.randint(1,1000) > 990:
-                    print("crash")
-                    print(stock)
-                    stockList[stock]['randomX'] = -6
-                    stockList[stock]['randomY'] = round(random.triangular(0.1,1,
-                                                                          10),2)
-                if random.randint(1,1000) > 950:
-                    print(stock)
-                    stockList[stock]['randomX'] = round(random.triangular(-5,1,
-                                                                          5),2)
-                    stockList[stock]['randomY'] = round(random.triangular(0.1,1,10),2)
-                    print(stockList[stock]['randomX'])
+            if random.randint(1,1000) > 990:
+                print("crash")
+                print(stock)
+                stockList[stock]['randomX'] = -6
+                stockList[stock]['randomY'] = round(random.triangular(0.1, 1,
+                                                                      10), 2)
+            if random.randint(1,1000) > 950:
+                print(stock)
+                stockList[stock]['randomX'] = round(random.triangular(-5, 1,
+                                                                      5), 2)
+                stockList[stock]['randomY'] = round(random.triangular(0.1, 1, 10), 2)
+                print(stockList[stock]['randomX'])
 
-                if len(stockList) < 6:
-                    await newStock()
+            if len(stockList) < 6:
+                await newStock()
 
-            with open('stockList.json', 'w') as f:
-                json.dump(stockList,f)
+        with open('stockList.json', 'w') as f:
+            json.dump(stockList,f)
 
-            ### uses matplotlib to create plot
+        ### uses matplotlib to create plot
+        plt.figure()
+        plt.ylabel('Cost')
+        plt.xlabel('Time')
 
-            plt.figure()
-            plt.ylabel('Cost')
-            plt.xlabel('Time')
+        plt.title('Stock Market', fontsize=20)
 
-            plt.title('Stock Market', fontsize=20)
+        for stock in stockList:
+            plt.plot(stockList[stock]['pastPrices'] + [stockList[stock]['price']], label=stock,
+                     linewidth=2.5, alpha=0.80)
+        plt.legend(framealpha=0.5)
+        plt.tight_layout()
 
-            for stock in stockList:
-                plt.plot(stockList[stock]['pastPrices'] + [stockList[stock]['price']], label = stock,
-                         linewidth = 2.5, alpha=0.80)
-            plt.legend(framealpha=0.5)
-            plt.tight_layout()
+        plt.savefig('recentchart.png', transparent=True, dpi=200)
 
-            plt.savefig('recentchart.png', transparent=True, dpi = 200)
+        plt.close('all')
 
-            plt.close('all')
-
-            for server in servers:
-                try:
-                    await displayStocks(servers[server]['channel'])
-                except:
-                    pass
+        for server in servers:
+            try:
+                await displayStocks(servers[server]['channel'])
+            except:
+                pass
 
 @client.event
 async def on_member_join(member):
     global users
-
-    await update_data(users,member)
+    await update_data(users, member)
 
 @client.event
 async def on_guild_join(guild):
@@ -136,23 +133,18 @@ async def on_guild_join(guild):
 async def on_message(message):
     global users
     global stockList
-    global alreadySent
     global servers
 
     await update_data(users, message.author)
-
     userID = str(message.author.id)
 
-
     if '$' in message.content.lower():
-
         if message.author.id != 491431308644319252:
             await add_money(users, message.author, 50)
-        
+
     if message.content.lower().startswith("stock set channel"):
         await addServer(message.guild, message.channel_mentions[0])
-        
-        
+
     if message.content.lower().startswith("stock"):
         messageWords = message.content.lower().split()
         userMoney = str(users[str(message.author.id)]['money'])
@@ -195,12 +187,9 @@ async def on_message(message):
 
                     blank = str(stockList[stockName.upper()]['buyers'][str(message.author.id)]['stocks'])
                     await message.channel.send(":moneybag: Now you have " + blank + " stock(s) of " + str(stockName) + " and $" + str(round(users[str(message.author.id)]['money'])) + ". :moneybag:")
-
             return
 
         if word4 == 'sell':
-
-
             stockName = word3.upper()
             stockCost = stockList[stockName.upper()]['price']
             stocksOwned = stockList[stockName.upper()]["buyers"][str(message.author.id)]["stocks"]
@@ -218,21 +207,21 @@ async def on_message(message):
                     await message.channel.send("You don't have that many stocks to sell.")
                 if amount <= int(stocksOwned):
 
-                    await message.channel.send(":dollar: Success! You have sold " + str(round(amount,2)) + " stock(s) of " + stockName + " for $" + str(round(totalProfit,2)) + ". :dollar:")
+                    await message.channel.send(":dollar: Success! You have sold " + str(round(amount, 2)) + " stock(s) of " + stockName + " for $" + str(round(totalProfit, 2)) + ". :dollar:")
                     await add_stocks(message.author, stockName, -1*amount)
                     await add_money(users, message.author, 1*totalProfit)
 
                     blank = str(stockList[stockName.upper()]['buyers'][str(message.author.id)]['stocks'])
-                    await message.channel.send(":moneybag: Now you have " + blank + " stock(s) of " + stockName + " and $" + str(round(users[str(message.author.id)]['money'],2)) + ". :moneybag:")
-
+                    await message.channel.send(":moneybag: Now you have " + blank + " stock(s) of " + stockName + " and $" + str(round(users[str(message.author.id)]['money'], 2)) + ". :moneybag:")
             return
+
     if message.content.lower() == "my stocks":
 
         embed = discord.Embed(title="YOUR STOCKS", color=0x8bcb98)
         money = users[str(message.author.id)]['money']
         netWorth = 0
         netWorth += money
-        embed.add_field(name= "Uninvested Money", value= round(money,2))
+        embed.add_field(name= "Uninvested Money", value= round(money, 2))
         for stock in stockList:
             stockName = stock
             stockValue = stockList[stock]['price']
@@ -241,15 +230,15 @@ async def on_message(message):
             except:
                 stocksOwned = 0
                 pass
-            embed.add_field(name=stockName, value= str(stocksOwned) + " ($" + str(round(stocksOwned * stockValue,2)) + ")")
+            embed.add_field(name=stockName, value=str(stocksOwned) + " ($" + str(round(stocksOwned * stockValue, 2)) + ")")
             netWorth += stocksOwned * stockValue
-        embed.add_field(name="Net Worth", value= round(netWorth,2))
-        await message.channel.send( embed = embed)
+        embed.add_field(name="Net Worth", value=round(netWorth, 2))
+        await message.channel.send(embed=embed)
         return
 
     if message.content.lower() == "my money":
 
-        await message.channel.send( ":money_mouth: You have $" + str(round(users[str(message.author.id)]['money'],2)) + " :money_mouth: ")
+        await message.channel.send(":money_mouth: You have $" + str(round(users[str(message.author.id)]['money'], 2)) + " :money_mouth: ")
         return
 
     if message.content.lower() == "stock help":
@@ -259,11 +248,11 @@ async def on_message(message):
         embed.add_field(name="Flip (Bet Amount) (Heads or Tails)", value=f"Coin flip to win (or lose) money.")
         embed.add_field(name="Leaderboards", value=f"Displays the 5 people with the most money.")
         embed.add_field(name="Give (Recipient) (Amount)", value=f"Transfers money to another person.")
-        embed.add_field(name="Stock (Stock Abbreviation) Buy/Sell (Amount)", value= "Command for buying or selling stocks. Example: 'stocks ABC buy 1'")
+        embed.add_field(name="Stock (Stock Abbreviation) Buy/Sell (Amount)", value="Command for buying or selling stocks. Example: 'stocks ABC buy 1'")
         embed.add_field(name="Stock Info", value="Gives you the current graph and values of all stocks.")
         embed.add_field(name="My Stocks", value="Displays the amount of stocks you own from each company and the combined value of all of your stocks.")
         embed.add_field(name="Stock Set Channel #channel", value="Owner only command to set a channel for a stock feed.")
-        await message.channel.send( embed = embed)
+        await message.channel.send(embed=embed)
         return
 
     if message.content.lower().startswith("give"):
@@ -274,7 +263,7 @@ async def on_message(message):
         reciever = message.mentions[0]
         if float(amount) > 0:
             if float(amount) <= float(userMoney):
-                await message.channel.send( ":grin: " + str(message.author.mention) + " has given " + str(reciever.mention) + " $" + amount + "!")
+                await message.channel.send(":grin: " + str(message.author.mention) + " has given " + str(reciever.mention) + " $" + amount + "!")
                 await add_money(users, message.author, -1 * int(amount))
                 await add_money(users, reciever, int(amount))
 
@@ -299,9 +288,9 @@ async def on_message(message):
 
             userID = str(sortedTopSet[x][0])
             userMoney = str(round(sortedTopSet[x][1],2))
-            embed.add_field(name= userID, value= "$"+userMoney)
+            embed.add_field(name=userID, value="$"+userMoney)
 
-        await message.channel.send(embed = embed)
+        await message.channel.send(embed=embed)
 
     if message.content.lower().startswith('flip'):
         userMoney = int(users[str(message.author.id)]['money'])
@@ -323,35 +312,35 @@ async def on_message(message):
         if str(messageWords[1]) == "all":
             betAmount = userMoney
         if betAmount <= 0:
-            await message.channel.send( "You have to bet more than 0!")
+            await message.channel.send("You have to bet more than 0!")
 
         if betAmount > userMoney:
-            await message.channel.send( "Your bet is too high!")
+            await message.channel.send("Your bet is too high!")
 
         if betAmount <= userMoney and betAmount > 0:
 
-            await message.channel.send( "You pick **" + choice + "**!")
-            flip = randint(1,2)
+            await message.channel.send("You pick **" + choice + "**!")
+            flip = randint(1, 2)
             botChoice = ""
 
             if flip == 1:
                 botChoice = "heads"
-                await message.channel.send( "The coin lands on...")
-                await message.channel.send( "**" + botChoice + "**!")
+                await message.channel.send("The coin lands on...")
+                await message.channel.send("**" + botChoice + "**!")
             if flip == 2:
                 botChoice = "tails"
-                await message.channel.send( "The coin lands on...")
-                await message.channel.send( "**" + botChoice + "**!")
+                await message.channel.send("The coin lands on...")
+                await message.channel.send("**" + botChoice + "**!")
             if botChoice == choice:
-                await message.channel.send( ":moneybag: You win $" + str(betAmount) + "! :moneybag:")
+                await message.channel.send(":moneybag: You win $" + str(betAmount) + "! :moneybag:")
                 await add_money(users, message.author, betAmount)
 
 
             elif botChoice != choice:
-                await message.channel.send( ":rage: HAHAHA You LOSE!! NO!! :rage:")
+                await message.channel.send(":rage: HAHAHA You LOSE!! NO!! :rage:")
                 await add_money(users, message.author, betAmount*-1)
-
         return
+
 
 async def update_data(users, user):
     if not str(user.id) in users:    
@@ -361,18 +350,19 @@ async def update_data(users, user):
         users[str(user.id)]['netWorth'] = 0
 
     with open('users.json', 'w') as f:
-        json.dump(users,f)
+        json.dump(users, f)
 
-async def add_money(users,user,money):
 
+async def add_money(users, user, money):
     users[str(user.id)]['money'] += money
     with open('users.json', 'w') as f:
-        json.dump(users,f)
+        json.dump(users, f)
+
 
 async def newStock():
     global users
     global stockList
-    ## A. Names the stock (newStock)
+    # A. Names the stock (newStock)
     adj1 = str(r.choice(AdjAlpha))
     adj2 = str(r.choice(AdjAlpha))
     # ensures no repeats in adjectives
@@ -380,7 +370,7 @@ async def newStock():
         adj2 = str(r.choice(AdjAlpha))
     newStock = adj1 + ' ' + adj2 + ' ' + str(r.choice(NAlpha))
 
-    ## B. Creates the Ticker symbol (newTicker)
+    # B. Creates the Ticker symbol (newTicker)
     pullTicker = [char for char in newStock if char.isupper()]
     newTicker = ''
 
@@ -389,11 +379,11 @@ async def newStock():
 
     initialPrice = round(random.triangular(1,25,625),2)
 
-    ### i. Creates the initial mean and stdev for the growth rate
+    # i. Creates the initial mean and stdev for the growth rate
     randomX = round(random.triangular(-5,1,5),2)
     randomY = round(random.triangular(0.1,1,10),2)
 
-    #opens json file and adds the ticker and the price under the stock name
+    # opens json file and adds the ticker and the price under the stock name
     if not newTicker in stockList:
         stockList[newTicker] = {}
         stockList[newTicker]['stockName'] = newStock
@@ -406,10 +396,9 @@ async def newStock():
         for i in range(50):
             stockList[newTicker]['pastPrices'].append(0)
 
-# B. This is the growth model, which takes a rate from a normal distribution using the mean and stdef from above
 
+#B. This is the growth model, which takes a rate from a normal distribution using the mean and stdef from above
 async def YSELoop(stock, price, randomX, randomY):
-
     global users
     global stockList
 
@@ -435,7 +424,8 @@ async def YSELoop(stock, price, randomX, randomY):
     if price <= 0:
         price = 0
 
-    return round(price,2)
+    return round(price, 2)
+
 
 async def displayStocks(serverID):
     global users
@@ -446,8 +436,9 @@ async def displayStocks(serverID):
     for stock in stockList:
         name = stockList[stock]['stockName']
         stockPrice = stockList[stock]['price']
-        embed.add_field(name=name, value=round(stockPrice,2))
-    await client.get_channel(serverID).send(embed = embed)
+        embed.add_field(name=name, value=round(stockPrice, 2))
+    await client.get_channel(serverID).send(embed=embed)
+
 
 async def addServer(guild, channel):
     print("adding server")
@@ -459,7 +450,7 @@ async def addServer(guild, channel):
         servers[str(guild.id)]['channel'] = channel.id
 
     with open('servers.json', 'w') as f:
-        json.dump(servers,f)
+        json.dump(servers, f)
 
 
 async def add_stocks(username, stockname, number):
@@ -473,17 +464,5 @@ async def add_stocks(username, stockname, number):
         stockList[stockname]['buyers'][str(username.id)]['stocks'] = 0
     stockList[stockname]['buyers'][str(username.id)]['stocks'] += number
     stockList[stockname]['buyers'][str(username.id)]['stocks']
-
-async def playAudio(audioName, message):
-        try:
-            server = message.server
-            voice_client = client.voice_client_in(server)
-            await voice_client.disconnect()
-        except:
-            pass
-        channel = message.author.voice_channel
-        join = await client.join_voice_channel(channel)
-        play = join.create_ffmpeg_player(audioName)
-        play.start()
 
 client.run("Insert token here")
